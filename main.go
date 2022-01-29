@@ -6,12 +6,14 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"os/user"
 	"strings"
 	"time"
 
+	"github.com/a-h/beeper"
 	"github.com/a-h/character"
 	"github.com/a-h/debounce"
-	"github.com/stianeikeland/go-rpio/v4"
+	"github.com/stianeikeland/go-rpio"
 	"periph.io/x/periph/conn/i2c"
 	"periph.io/x/periph/conn/i2c/i2creg"
 	"periph.io/x/periph/host"
@@ -105,11 +107,19 @@ type Actions struct {
 	Disallows Disallows `json:"disallows"`
 }
 
+func getRoot() bool {
+	currentUser, err := user.Current()
+	if err != nil {
+		log.Fatalf("[isRoot] Unable to get current user: %s", err)
+	}
+	return currentUser.Username == "root"
+}
+
 func main() {
 	// Use the periph library.
 	_, err := host.Init()
 	if err != nil {
-		fmt.Printf("err: %v\n", err)
+		log.Printf("err: %v\n", err)
 		os.Exit(1)
 	}
 
@@ -118,7 +128,7 @@ func main() {
 	// https://www.raspberrypi.org/documentation/configuration/raspi-config.md
 	bus, err := i2creg.Open("")
 	if err != nil {
-		fmt.Printf("err: %v\n", err)
+		log.Printf("err: %v\n", err)
 		os.Exit(1)
 	}
 
@@ -140,12 +150,13 @@ func main() {
 	if err != nil {
 		log.Fatalln("Could not open GPIOs")
 	}
+	defer rpio.Close()
 	normallyClosed := false
 	// https://www.quinapalus.com/hd44780udg.html
 	chars := [8][8]byte{
 		{0x8, 0xc, 0xe, 0xf, 0xe, 0xc, 0x8, 0x0}, // play
-		{0x0, 0xa, 0xa, 0xa, 0xa, 0xa, 0x0, 0x0}, //pause
-		{0x0, 0x0, 0xa, 0xa, 0xa, 0xa, 0x0, 0x0},
+		{0x0, 0xa, 0xa, 0xa, 0xa, 0xa, 0x0, 0x0}, // pause
+		{0x0, 0x0, 0xa, 0xa, 0xa, 0xa, 0x0, 0x0}, // heart
 		{0xe, 0x1b, 0x11, 0x11, 0x11, 0x1f, 0x1f},
 		{0xe, 0x1b, 0x11, 0x11, 0x1f, 0x1f, 0x1f},
 		{0xe, 0x1b, 0x11, 0x1f, 0x1f, 0x1f, 0x1f},
@@ -156,7 +167,7 @@ func main() {
 
 	// Play/Pause
 	onClickPlayPause := func() {
-		fmt.Println("Clicked Play/Pause.")
+		log.Println("Clicked Play/Pause.")
 		playpause()
 	}
 	swPlayPause := debounce.Button(onClickPlayPause, normallyClosed)
@@ -207,6 +218,16 @@ func main() {
 	}
 	go getgpio()
 
+	// SETUP PWM BUZZER, MUST BE RUN AS ROOT.
+
+	if getRoot() {
+		log.Println("You are root, enable PWM")
+	} else {
+		log.Fatalln("You are NOT root! Please run this program as root!")
+	}
+	pin := rpio.Pin(18)
+	beeper.Beep(pin, 440, time.Millisecond*500)
+
 	for {
 		select {
 		case <-ticker.C:
@@ -221,6 +242,8 @@ func main() {
 			}
 
 			if err != nil {
+				log.Println(err.Error())
+				log.Println(status)
 				d.Goto(0, 0)
 				d.Print("Cannot connect, ")
 				d.Goto(1, 0)

@@ -4,4 +4,4 @@ build-pi:
 deploy: build-pi
 	-ssh pi@spotipy.local sudo killall CLOCK
 	scp ./CLOCK pi@spotipy.local:/home/pi/CLOCK
-	ssh pi@spotipy.local ./CLOCK
+	ssh pi@spotipy.local sudo ./CLOCK
