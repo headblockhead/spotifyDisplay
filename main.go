@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/a-h/beeper"
 	"github.com/a-h/character"
 	"github.com/a-h/debounce"
 	"github.com/stianeikeland/go-rpio"
@@ -218,13 +219,13 @@ func main() {
 
 	// SETUP PWM BUZZER, MUST BE RUN AS ROOT.
 
-	//if getRoot() {
-	//	log.Println("You are root, enable PWM")
-	//} else {
-	//	log.Fatalln("You are NOT root! Please run this program as root!")
-	//}
-	//pin := rpio.Pin(18)
-	//beeper.Beep(pin, 440, time.Millisecond*500)
+	if getRoot(d) {
+		log.Println("You are root, enable PWM")
+	} else {
+		log.Fatalln("You are NOT root! Please run this program as root!")
+	}
+	pin := rpio.Pin(18)
+	beeper.Beep(pin, 440, time.Millisecond*500)
 
 	for {
 		select {
