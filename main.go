@@ -9,7 +9,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/a-h/beeper"
 	"github.com/a-h/character"
 	"github.com/a-h/debounce"
 	"github.com/stianeikeland/go-rpio"
@@ -157,10 +156,10 @@ func main() {
 	normallyClosed := false
 	// https://www.quinapalus.com/hd44780udg.html
 	chars := [8][8]byte{
-		{0x8, 0xc, 0xe, 0xf, 0xe, 0xc, 0x8, 0x0}, // play
-		{0x0, 0xa, 0xa, 0xa, 0xa, 0xa, 0x0, 0x0}, // pause
-		{0x0, 0x0, 0xa, 0xa, 0xa, 0xa, 0x0, 0x0}, // heart
-		{0xe, 0x1b, 0x11, 0x11, 0x11, 0x1f, 0x1f},
+		{0x8, 0xc, 0xe, 0xf, 0xe, 0xc, 0x8, 0x0},   // play
+		{0x0, 0xa, 0xa, 0xa, 0xa, 0xa, 0x0, 0x0},   // pause
+		{0x0, 0x0, 0xa, 0xa, 0xa, 0xa, 0x0, 0x0},   // heart
+		{0x0, 0x0, 0xa, 0x15, 0x11, 0xa, 0x4, 0x0}, // notheart
 		{0xe, 0x1b, 0x11, 0x11, 0x1f, 0x1f, 0x1f},
 		{0xe, 0x1b, 0x11, 0x1f, 0x1f, 0x1f, 0x1f},
 		{0xe, 0x1b, 0x1f, 0x1f, 0x1f, 0x1f, 0x1f},
@@ -217,15 +216,9 @@ func main() {
 	}
 	go getgpio()
 
-	// SETUP PWM BUZZER, MUST BE RUN AS ROOT.
+	// Setup buzzer
 
-	if getRoot(d) {
-		log.Println("You are root, enable PWM")
-	} else {
-		log.Fatalln("You are NOT root! Please run this program as root!")
-	}
-	pin := rpio.Pin(18)
-	beeper.Beep(pin, 440, time.Millisecond*500)
+	//	pin := rpio.Pin(18)
 
 	for {
 		select {
@@ -246,12 +239,10 @@ func main() {
 				if err != nil {
 					handleErr(101, d, err.Error(), "JSON EXTRACT ERR")
 				} else {
-					d.Clear()
 					d.Goto(0, 0)
 					cut := substring(details.Item.Name, offset, 14)
 					d.Print(pad(cut, 14))
 					offset++
-					progressbar(int((details.ProgressMs/details.Item.DurationMs)*100), d, !details.IsPlaying)
 					d.Goto(0, 14)
 					d.WriteData(0b01111100)
 					if !details.IsPlaying {
@@ -259,6 +250,7 @@ func main() {
 					} else {
 						d.WriteData(0b00000000)
 					}
+					progressbar(int((details.ProgressMs/details.Item.DurationMs)*100), d, !details.IsPlaying)
 				}
 			}
 		case <-quit:
