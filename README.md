@@ -1,2 +1,2 @@
-# spotify_lcd
+# spotifyDisplay
 Display that allows for control of spotify account.
